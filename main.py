@@ -257,8 +257,8 @@ class CCImageTool:
             initialdir="outputs",
             title="Save Export As...",
             defaultextension=".txt",
-            filetypes=[("Fichiers texte", "*.txt")],
-            initialfile="export_cc.txt"
+            filetypes=[("Text files", "*.txt")],
+            initialfile="export.txt"
         )
 
         if not file_path: return
