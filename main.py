@@ -265,7 +265,7 @@ class CCImageTool:
 
         txt_lines, cc_img = self.generate_cc_data()
 
-        with open("cc_export.txt", "w") as f:
+        with open(file_path, "w") as f:
             f.write("\n".join(txt_lines))
 
         messagebox.showinfo("SUCCESS", "Export finished ! Image should appear flat and its normal :)")
