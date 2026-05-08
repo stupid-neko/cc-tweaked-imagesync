@@ -18,10 +18,13 @@ def load_config():
     palette = {k: tuple(v) for k, v in config["palette_rgb"].items()}
     char_size = tuple(config["char_correction"]["char_size_wh"])
     
-    return palette, char_size
+    reverse_w_map = {int(v): int(k) for k, v in config["screen_w_map"].items()}
+    reverse_h_map = {int(v): int(k) for k, v in config["screen_h_map"].items()}
+
+    return palette, char_size, reverse_w_map, reverse_h_map
 
 try:
-    CC_PALETTE, CHAR_SIZE = load_config()
+    CC_PALETTE, CHAR_SIZE, REVERSE_W_MAP, REVERSE_H_MAP = load_config()
 except Exception as e:
     print(f"Error while loading config.toml : {e}")
     sys.exit()
@@ -41,12 +44,18 @@ class CCViewerApp:
         # Toolbox
         top_frame = tk.Frame(self.root, pady=10)
         top_frame.pack(fill=tk.X)
-        tk.Button(top_frame, text="Drag and drop, or open txt file...", command=self.ask_file).pack()
+        tk.Button(top_frame, text="Open txt file...", command=self.ask_file).pack()
 
         # Main display zone
         right_frame = tk.Frame(self.root, bg="#1e1e1e", relief="sunken", borderwidth=2)
         right_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        tk.Label(right_frame, text=f"Simulation ({CHAR_SIZE[0]}x{CHAR_SIZE[1]})", fg="white", bg="#1e1e1e", font=("Arial", 12, "bold")).pack(pady=5)
+        
+        tk.Label(right_frame, text=f"Simulation", fg="white", bg="#1e1e1e", font=("Arial", 12, "bold")).pack(pady=5)
+        
+        # Label for detected configuration
+        self.lbl_info = tk.Label(right_frame, text="Load a file to see dimensions", fg="#aaaaaa", bg="#1e1e1e", font=("Arial", 10))
+        self.lbl_info.pack(pady=(0, 5))
+        
         self.lbl_cc = tk.Label(right_frame, bg="black")
         self.lbl_cc.pack(expand=True)
 
@@ -65,6 +74,14 @@ class CCViewerApp:
 
         width = len(lines[0])
         height = len(lines)
+
+        # Detect image configuration
+        screens_w = REVERSE_W_MAP.get(width, "?")
+        screens_h = REVERSE_H_MAP.get(height, "?")
+        
+        info_text = f"Detected config: {screens_w}x{screens_h} screens ({width}x{height})."
+        print(f"Loaded{os.path.basename(file_path)} -> {info_text}")
+        self.lbl_info.config(text=info_text)
 
         # Image creation
         img_raw = Image.new("RGB", (width, height))
