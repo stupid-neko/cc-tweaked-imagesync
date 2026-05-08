@@ -6,7 +6,7 @@ local pastebin_id = args[1]
 -- Checking args
 if not pastebin_id then
     print("Use     : imagesync <PASTEBIN_ID> ")
-    print("Example : imagesync aBcD123")
+    print("Example : imagesync pmF7EYpT")
     return
 end
 
@@ -20,25 +20,48 @@ end
 mon.setTextScale(0.5)
 mon.clear()
 
--- Pastebin download
-print("Connecting to Pastebin (" .. pastebin_id .. ")...")
-local url = "https://pastebin.com/raw/" .. pastebin_id
-local response, err = http.get(url)
+-- Cache system
+local content = ""
+local dir_path = "Images"
+local file_path = dir_path .. "/" .. pastebin_id .. ".txt"
 
-if not response then
-    print("Error while downloading from pastebin...")
-    print(err)
-    return
+-- Checking local cache
+if fs.exists(file_path) then
+    print("Image found in cache, loading...")
+    local file = fs.open(file_path, "r")
+    content = file.readAll()
+    file.close()
+else
+    -- Pastebin download
+    print("Connecting to Pastebin (" .. pastebin_id .. ")...")
+    local url = "https://pastebin.com/raw/" .. pastebin_id
+    local response, err = http.get(url)
+
+    if not response then
+        print("Error while downloading from pastebin...")
+        print(err)
+        return
+    end
+
+    content = response.readAll()
+    response.close()
+
+    if string.len(content) == 0 then
+        print("Error: File is empty")
+        return
+    end
+
+    -- Creating "Images/" if not exists
+    if not fs.exists(dir_path) then
+        fs.makeDir(dir_path)
+    end
+
+    -- Save image to Images/
+    print("Saving locally...")
+    local file = fs.open(file_path, "w")
+    file.write(content)
+    file.close()
 end
-
-local content = response.readAll()
-response.close()
-
-if string.len(content) == 0 then
-    print("Error: File is empty")
-    return
-end
-print("Displaying picture...")
 
 -- Render using term.blit
 local y = 1

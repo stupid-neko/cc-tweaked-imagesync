@@ -8,9 +8,7 @@ A tool to convert real-world images and display them flawlessly on CC:Tweaked in
 
 ComputerCraft "empty" characters can be used as "pixels", but these characters have a 5x8 aspect ratio. If you simply resize an image to the monitor's character resolution, it will appear horribly stretched in-game.
 
-Therefort, this script calculates the true physical aspect ratio, pre-distorting the image, mapping it to the 16-color CC:Tweaked palette. So everything's good !
-
-*To do: add a minecraft screenshot hehe*
+Therefore, this script calculates the true physical aspect ratio, pre-distorting the image, mapping it to the 16-color CC:Tweaked palette. So everything's good !
 
 
 ## Getting started
@@ -26,6 +24,9 @@ Therefort, this script calculates the true physical aspect ratio, pre-distorting
 
 > [!CAUTION]
 > Standard grey monitors do not support color. Since 1.80pr1 they can use all 16 colors but will render in grayscale on screen. More information [here](https://tweaked.cc/peripheral/monitor.html#v:blit)
+<p align="center">
+  <img src="Images/ingame_bw.png" alt="Grey scale image" width="300"/>
+</p>
 
 
 ### Installation
@@ -72,9 +73,9 @@ Because CC computers need a way to download the image data, Pastebin is used.
 3. Copy the ID from the end of the Pastebin URL (for https://pastebin.com/aBcD123, the ID is aBcD123).
 
 ### Display in Minecraft (Lua)
-Download the Lua script to your CC computer with pastebin. I published the most up to date version to pastebin [here](https://pastebin.com/U8fvCfQ6), and I recommend you to do so (or use mine). Then type:
+Download the Lua script to your CC computer with pastebin. I published the most up to date version to pastebin [here](https://pastebin.com/x0JWn6b2), and I recommend you to do so (or use mine). Then type:
 ```
-pastebin get [your code or "U8fvCfQ6"] imagesync.lua
+pastebin get [your code or "x0JWn6b2"] imagesync.lua
 ``` 
 
 Then run the script with the Pastebin ID you copied
@@ -86,7 +87,7 @@ Then run the script with the Pastebin ID you copied
 If for any reason you want to see a text file you made long time ago, you can use `viewer.py`. You will also be able to see the rendered image, and if you forgot its width/height, this script will tell it to you :D
 
 <p align="center">
-  <img src="Images/viewer.png" alt="Anime GIF" width="300"/>
+  <img src="Images/viewer.png" alt="Dimensions" width="300"/>
 </p>
 
 ### Custom palettes
@@ -94,8 +95,8 @@ Starting from v1.80pr1, `setPaletteColor(...)` can change the rgb value for a co
 
 
 ## To do if im not lazy
-- [ ] Lua: Download and save image so they are not downloaded each time
 - [ ] No other ideas :c
+- [x] ~~Lua: Download and save image so they are not downloaded each time~~
 - [x] ~~Recognition of a txt file dimensions~~
 
 
