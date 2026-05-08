@@ -1,0 +1,10 @@
+# Folders and stuff
+.venv/
+
+# Input and Output
+Images/
+*.txt
+*.png
+
+# Not ignore requirements :(
+!requirements.txt
