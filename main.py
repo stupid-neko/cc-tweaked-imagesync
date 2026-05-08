@@ -3,7 +3,7 @@ import os
 import tomllib
 import tkinter as tk
 from tkinter import filedialog, ttk, messagebox
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageEnhance
 
 
 # Load config.toml
@@ -59,6 +59,16 @@ class CCImageTool:
         self.root = root
         self.root.title("CC:Tweaked ImageSync - Cropper")
 
+        # Addition for Slider and live change
+        self.w_var = tk.IntVar(value=8)
+        self.h_var = tk.IntVar(value=4)
+
+        # Image settings centered at 1.0
+        self.brightness_var = tk.DoubleVar(value=1.0)
+        self.contrast_var = tk.DoubleVar(value=1.0)
+        self.saturation_var = tk.DoubleVar(value=1.0)
+        self.gamma_var = tk.DoubleVar(value=1.0)
+
         self.original_image = None
         self.display_image = None
         self.display_scale = 1.0
@@ -79,14 +89,13 @@ class CCImageTool:
         top_frame.pack(fill=tk.X)
 
         tk.Button(top_frame, text="Open Image...", command=self.load_image).pack(side=tk.LEFT, padx=5)
+        
         tk.Label(top_frame, text="Screens (W):").pack(side=tk.LEFT)
-        self.w_var = tk.IntVar(value=8)
         w_cb = ttk.Combobox(top_frame, textvariable=self.w_var, values=list(SCREEN_W_MAP.keys()), width=3, state="readonly")
         w_cb.pack(side=tk.LEFT)
         w_cb.bind("<<ComboboxSelected>>", self.on_size_change)
 
         tk.Label(top_frame, text="Screens (H):").pack(side=tk.LEFT, padx=(10,0))
-        self.h_var = tk.IntVar(value=6)
         h_cb = ttk.Combobox(top_frame, textvariable=self.h_var, values=list(SCREEN_H_MAP.keys()), width=3, state="readonly")
         h_cb.pack(side=tk.LEFT)
         h_cb.bind("<<ComboboxSelected>>", self.on_size_change)
@@ -100,6 +109,8 @@ class CCImageTool:
         # Canvas Original Image
         self.canvas = tk.Canvas(main_frame, bg="#2b2b2b", cursor="crosshair")
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Mouse bindings (Win / Linux)
         self.canvas.bind("<ButtonPress-1>", self.on_press)
         self.canvas.bind("<B1-Motion>", self.on_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_release)
@@ -110,9 +121,41 @@ class CCImageTool:
         # Overview panel
         right_frame = tk.Frame(main_frame, width=350, bg='#1e1e1e')
         right_frame.pack(side=tk.RIGHT, fill=tk.Y)
-        tk.Label(right_frame, text="Simulation on CC screen (5x8) :", fg="white", bg="#1e1e1e", pady=10).pack()
-        self.preview_label = tk.Label(right_frame, bg="black")
+
+        # Simulated overview
+        preview_container = tk.Frame(right_frame, bg="#1e1e1e")
+        preview_container.pack(side=tk.TOP, fill=tk.Y, padx=10, pady=(10,0))
+        tk.Label(preview_container, text="Render on CC screen :", fg="white", bg="#1e1e1e", pady=10).pack()
+        self.preview_label = tk.Label(preview_container, bg="black")
         self.preview_label.pack(padx=10)
+
+        # Slider frame
+        slider_frame = tk.LabelFrame(right_frame, text="Image settings", fg="white", bg="#1e1e1e", pady=10)
+        slider_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(0,10))
+
+        def on_adjust_change(event=None):
+            self.on_adjustments_change()
+        
+        # Sliders with labels
+        # Brightness
+        tk.Label(slider_frame, text="Luminosity", fg="white", bg="#1e1e1e").pack()
+        self.brightness_scale = tk.Scale(slider_frame, from_=0.0, to=3.0, resolution=0.01, orient=tk.HORIZONTAL, variable=self.brightness_var, bg="#1e1e1e", fg="white", troughcolor="#333", highlightthickness=0, command=on_adjust_change)
+        self.brightness_scale.pack(fill=tk.X, padx=5, pady=(0, 10))
+    
+        # Contrast
+        tk.Label(slider_frame, text="Contrast", fg="white", bg="#1e1e1e").pack()
+        self.contrast_scale = tk.Scale(slider_frame, from_=0.0, to=3.0, resolution=0.01, orient=tk.HORIZONTAL, variable=self.contrast_var, bg="#1e1e1e", fg="white", troughcolor="#333", highlightthickness=0, command=on_adjust_change)
+        self.contrast_scale.pack(fill=tk.X, padx=5, pady=(0, 10))
+    
+        # Saturation
+        tk.Label(slider_frame, text="Saturation", fg="white", bg="#1e1e1e").pack()
+        self.saturation_scale = tk.Scale(slider_frame, from_=0.0, to=3.0, resolution=0.01, orient=tk.HORIZONTAL, variable=self.saturation_var, bg="#1e1e1e", fg="white", troughcolor="#333", highlightthickness=0, command=on_adjust_change)
+        self.saturation_scale.pack(fill=tk.X, padx=5, pady=(0, 10))
+    
+        # Gamma
+        tk.Label(slider_frame, text="Gamma", fg="white", bg="#1e1e1e").pack()
+        self.gamma_scale = tk.Scale(slider_frame, from_=0.0, to=3.0, resolution=0.01, orient=tk.HORIZONTAL, variable=self.gamma_var, bg="#1e1e1e", fg="white", troughcolor="#333", highlightthickness=0, command=on_adjust_change)
+        self.gamma_scale.pack(fill=tk.X, padx=5, pady=(0, 10))
     
 
     def load_image(self):
@@ -143,6 +186,14 @@ class CCImageTool:
         self.target_w_chars = SCREEN_W_MAP[self.w_var.get()]
         self.target_h_chars = SCREEN_H_MAP[self.h_var.get()]
         self.update_canvas()
+        self.update_preview()
+
+    
+    def on_adjustments_change(self):
+        # Empty color cache to force actualization
+        global COLOR_CACHE
+        COLOR_CACHE = {}
+        # Update preview
         self.update_preview()
     
     
@@ -182,7 +233,7 @@ class CCImageTool:
         self.crop_cx += (event.x - self.last_x)
         self.crop_cy += (event.y - self.last_y)
         self.last_x, self.last_y = event.x, event.y
-        self.update_canvas()
+        self.update_canvas()  # No realtime
     
 
     def on_release(self, event):
@@ -205,6 +256,30 @@ class CCImageTool:
 
         # 1. Cut image with proportions
         cropped = self.original_image.crop(orig_box)
+
+        # Image correction
+        gamma = self.gamma_var.get()
+        if gamma != 1.0:
+            inv_gamma = 1.0 / gamma
+            table = [int(pow(i / 255.0, inv_gamma) * 255.0) for i in range(256)]
+            cropped = cropped.point(table * 3)  # Table *3 spreads single lookup table across RGB channels
+        
+        saturation = self.saturation_var.get()
+        if saturation != 1.0:
+            enhancer = ImageEnhance.Color(cropped)
+            cropped = enhancer.enhance(saturation)
+        
+        contrast = self.contrast_var.get()
+        if contrast != 1.0:
+            enhancer = ImageEnhance.Contrast(cropped)
+            cropped = enhancer.enhance(contrast)
+        
+        brightness = self.brightness_var.get()
+        if brightness != 1.0:
+            enhancer = ImageEnhance.Brightness(cropped)
+            cropped = enhancer.enhance(brightness)
+            
+        cropped = cropped.convert('RGB')
 
         # 2. Resize on target char limit
         resized = cropped.resize((self.target_w_chars, self.target_h_chars), Image.Resampling.LANCZOS)
@@ -271,8 +346,12 @@ class CCImageTool:
         messagebox.showinfo("SUCCESS", "Export finished ! Image should appear flat and its normal :)")
 
 
-if __name__ == "__main__":
+def main():
     root = tk.Tk()
     app = CCImageTool(root)
     root.geometry("1100x700")
     root.mainloop()
+
+
+if __name__ == "__main__":
+    main()
