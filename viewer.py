@@ -80,7 +80,7 @@ class CCViewerApp:
         screens_h = REVERSE_H_MAP.get(height, "?")
         
         info_text = f"Detected config: {screens_w}x{screens_h} screens ({width}x{height})."
-        print(f"Loaded{os.path.basename(file_path)} -> {info_text}")
+        print(f"Loaded {os.path.basename(file_path)} -> {info_text}")
         self.lbl_info.config(text=info_text)
 
         # Image creation
