@@ -249,11 +249,25 @@ class CCImageTool:
 
     def export(self):
         if not self.original_image: return
+
+        # Create outputs folder
+        os.makedirs("outputs", exist_ok=True)
+
+        file_path = filedialog.asksaveasfilename(
+            initialdir="outputs",
+            title="Save Export As...",
+            defaultextension=".txt",
+            filetypes=[("Fichiers texte", "*.txt")],
+            initialfile="export_cc.txt"
+        )
+
+        if not file_path: return
+
         txt_lines, cc_img = self.generate_cc_data()
 
         with open("cc_export.txt", "w") as f:
             f.write("\n".join(txt_lines))
-            
+
         messagebox.showinfo("SUCCESS", "Export finished ! Image should appear flat and its normal :)")
 
 

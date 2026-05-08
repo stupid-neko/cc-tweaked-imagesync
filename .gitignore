@@ -3,8 +3,7 @@
 
 # Input and Output
 Images/
-*.txt
-*.png
+outputs/*
 
 # Not ignore requirements :(
 !requirements.txt
