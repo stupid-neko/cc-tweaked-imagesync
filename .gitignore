@@ -2,7 +2,7 @@
 .venv/
 
 # Input and Output
-input/
+input/*
 outputs/*
 
 # Not ignore requirements :(

@@ -98,6 +98,7 @@ Starting from v1.80pr1, `setPaletteColor(...)` can change the rgb value for a co
 - [ ] No other ideas :c
 - [x] ~~Lua: Download and save image so they are not downloaded each time~~
 - [x] ~~Recognition of a txt file dimensions~~
+- [x] ~~Add dithering~~
 
 
 ## Contributing

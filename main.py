@@ -31,7 +31,16 @@ except Exception as e:
     print(f"Error while loading config.toml : {e}")
     exit(1)
 
+
+# CONSTANT GO HERE
 COLOR_CACHE = {}
+
+BAYER_4X4 = (
+    ( 0,  8,  2, 10),
+    (12,  4, 14,  6),
+    ( 3, 11,  1,  9),
+    (15,  7, 13,  5)
+)
 
 
 def get_closest_cc_color(rgb):
@@ -68,6 +77,7 @@ class CCImageTool:
         self.contrast_var = tk.DoubleVar(value=1.0)
         self.saturation_var = tk.DoubleVar(value=1.0)
         self.gamma_var = tk.DoubleVar(value=1.0)
+        self.dither_var = tk.DoubleVar(value=0.0)
 
         self.original_image = None
         self.display_image = None
@@ -154,8 +164,13 @@ class CCImageTool:
     
         # Gamma
         tk.Label(slider_frame, text="Gamma", fg="white", bg="#1e1e1e").pack()
-        self.gamma_scale = tk.Scale(slider_frame, from_=0.0, to=3.0, resolution=0.01, orient=tk.HORIZONTAL, variable=self.gamma_var, bg="#1e1e1e", fg="white", troughcolor="#333", highlightthickness=0, command=on_adjust_change)
+        self.gamma_scale = tk.Scale(slider_frame, from_=0.0, to=5.0, resolution=0.01, orient=tk.HORIZONTAL, variable=self.gamma_var, bg="#1e1e1e", fg="white", troughcolor="#333", highlightthickness=0, command=on_adjust_change)
         self.gamma_scale.pack(fill=tk.X, padx=5, pady=(0, 10))
+
+        # Dithering
+        tk.Label(slider_frame, text="Dithering", fg="green", bg="#1e1e1e").pack()
+        self.dither_scale = tk.Scale(slider_frame, from_=0.0, to=2.0, resolution=0.05, orient=tk.HORIZONTAL, variable=self.dither_var, bg="#1e1e1e", fg="green", troughcolor="#333", highlightthickness=0, command=on_adjust_change)
+        self.dither_scale.pack(fill=tk.X, padx=5, pady=(0, 10))
     
 
     def load_image(self):
@@ -289,10 +304,21 @@ class CCImageTool:
         pixels = resized.load()
         out_pixels = cc_img.load()
 
+        # Dithering logic here I think
+        dither_strength = self.dither_var.get() * 64.0
+
         for y in range(self.target_h_chars):
             line_chars = []
             for x in range(self.target_w_chars):
-                char, rgb = get_closest_cc_color(pixels[x, y])
+                r, g, b = pixels[x, y]
+                if dither_strength > 0:
+                    # Normalize between +/- 0.5 and shift values
+                    bayer_val = (BAYER_4X4[y % 4][x % 4] / 16.0) - 0.5
+                    r = max(0, min(255, int(r + bayer_val * dither_strength)))
+                    g = max(0, min(255, int(g + bayer_val * dither_strength)))
+                    b = max(0, min(255, int(b + bayer_val * dither_strength)))
+
+                char, rgb = get_closest_cc_color((r, g, b))
                 line_chars.append(char)
                 out_pixels[x, y] = rgb
             txt_lines.append("".join(line_chars))
@@ -330,7 +356,7 @@ class CCImageTool:
 
         file_path = filedialog.asksaveasfilename(
             initialdir="outputs",
-            title="Save Export As...",
+            title="Export As...",
             defaultextension=".txt",
             filetypes=[("Text files", "*.txt")],
             initialfile="export.txt"
