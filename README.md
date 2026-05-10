@@ -99,6 +99,7 @@ Starting from v1.80pr1, `setPaletteColor(...)` can change the rgb value for a co
 - [x] ~~Lua: Download and save image so they are not downloaded each time~~
 - [x] ~~Recognition of a txt file dimensions~~
 - [x] ~~Add dithering~~
+- [ ] Add GIF support 
 
 
 ## Contributing
