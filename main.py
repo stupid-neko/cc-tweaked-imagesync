@@ -176,23 +176,25 @@ class CCImageTool:
     def load_image(self):
         path = filedialog.askopenfilename(filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp")])
         if not path: return
-        self.original_image = Image.open(path).convert('RGB')
+        self.original_image = Image.open(path)
 
-        w, h = self.original_image.size
+        # Copy first frame
+        frame0 = self.original_image.copy().convert('RGB')
+
+        w, h = frame0.size
         self.display_scale = min(800/w, 600/h)
         if self.display_scale > 1: self.display_scale = 1.0
 
         new_w, new_h = int(w * self.display_scale), int(h * self.display_scale)
-        self.display_image = self.original_image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        self.display_image = frame0.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
         self.tk_image = ImageTk.PhotoImage(self.display_image)
         self.canvas.config(scrollregion=(0,0,new_w,new_h))
         self.canvas.create_image(0, 0, anchor="nw", image=self.tk_image, tags="img")
 
         self.crop_cx, self.crop_cy = new_w/2, new_h/2
-
-        # Base zoom initial
         self.crop_zoom = 1.0
+
         self.update_canvas()
         self.update_preview()
     
@@ -264,18 +266,21 @@ class CCImageTool:
         self.update_preview()
     
 
-    def generate_cc_data(self):
+    def process_single_image(self, img_obj):
         x1, y1, x2, y2 = self.get_crop_box()
         s = self.display_scale
         orig_box = (int(x1/s), int(y1/s), int(x2/s), int(y2/s))
 
         # 1. Cut image with proportions
-        cropped = self.original_image.crop(orig_box)
+        cropped = img_obj.crop(orig_box).convert('RGB')
 
         # Image correction
         gamma = self.gamma_var.get()
         if gamma != 1.0:
-            inv_gamma = 1.0 / gamma
+            if gamma == 0.0:
+                inv_gamma = 100  # Min value = 0.01 ?
+            else:
+                inv_gamma = 1.0 / gamma
             table = [int(pow(i / 255.0, inv_gamma) * 255.0) for i in range(256)]
             cropped = cropped.point(table * 3)  # Table *3 spreads single lookup table across RGB channels
         
@@ -294,8 +299,6 @@ class CCImageTool:
             enhancer = ImageEnhance.Brightness(cropped)
             cropped = enhancer.enhance(brightness)
             
-        cropped = cropped.convert('RGB')
-
         # 2. Resize on target char limit
         resized = cropped.resize((self.target_w_chars, self.target_h_chars), Image.Resampling.LANCZOS)
 
@@ -326,6 +329,11 @@ class CCImageTool:
         return txt_lines, cc_img
     
 
+    def generate_cc_data(self):
+        # Return only frame 0
+        return self.process_single_image(self.original_image)
+    
+
     def update_preview(self):
         if not self.original_image: return
         _, cc_img = self.generate_cc_data()
@@ -350,8 +358,6 @@ class CCImageTool:
 
     def export(self):
         if not self.original_image: return
-
-        # Create outputs folder
         os.makedirs("outputs", exist_ok=True)
 
         file_path = filedialog.asksaveasfilename(
@@ -364,12 +370,42 @@ class CCImageTool:
 
         if not file_path: return
 
-        txt_lines, cc_img = self.generate_cc_data()
+        is_animated = getattr(self.original_image, "is_animated", False)
+        n_frames = self.original_image.n_frames if is_animated else 1
+        duration = self.original_image.info.get('duration', 100) if is_animated else 0
+        
+        # Make the header
+        header = f"{self.target_w_chars},{self.target_h_chars},{n_frames},{duration}"
 
-        with open(file_path, "w") as f:
-            f.write("\n".join(txt_lines))
+        # Make user wait and not think its a crash
+        self.root.config(cursor="watch")
+        self.root.update()
 
-        messagebox.showinfo("SUCCESS", "Export finished ! Image should appear flat and its normal :)")
+        try:
+            with open(file_path, "w") as f:
+                f.write(header + "\n")
+
+                if is_animated:
+                    for i in range(n_frames):
+                        self.original_image.seek(i)
+                        txt_lines, cc_img = self.process_single_image(self.original_image)
+                        f.write("\n".join(txt_lines) + "\n")
+                        if i == 0: first_frame_img = cc_img
+                    else:
+                        txt_lines, cc_img = self.process_single_image(self.original_image)
+                        f.write("\n".join(txt_lines) + "\n")
+                        first_frame_img = cc_img
+                
+            # # If you want to have png preview, uncomment this
+            # base_path = os.path.splitext(file_path)[0]
+            # png_path = f"{base_path}_raw.png"
+            # first_frame_img.save(png_path)
+
+            messagebox.showinfo("SUCCESS", f"Exported {n_frames} frames !")
+        
+        finally:
+            self.original_image.seek(0)  # Reset gif
+            self.root.config(cursor="")
 
 
 def main():

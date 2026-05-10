@@ -21,18 +21,11 @@ mon.setTextScale(0.5)
 mon.clear()
 
 -- Cache system
-local content = ""
 local dir_path = "Images"
 local file_path = dir_path .. "/" .. pastebin_id .. ".txt"
 
 -- Checking local cache
-if fs.exists(file_path) then
-    print("Image found in cache, loading...")
-    local file = fs.open(file_path, "r")
-    content = file.readAll()
-    file.close()
-else
-    -- Pastebin download
+if not fs.exists(file_path) then
     print("Connecting to Pastebin (" .. pastebin_id .. ")...")
     local url = "https://pastebin.com/raw/" .. pastebin_id
     local response, err = http.get(url)
@@ -43,35 +36,95 @@ else
         return
     end
 
-    content = response.readAll()
-    response.close()
-
-    if string.len(content) == 0 then
-        print("Error: File is empty")
-        return
-    end
-
-    -- Creating "Images/" if not exists
-    if not fs.exists(dir_path) then
-        fs.makeDir(dir_path)
-    end
-
-    -- Save image to Images/
+    if not fs.exists(dir_path) then fs.makeDir(dir_path) end
+    
     print("Saving locally...")
     local file = fs.open(file_path, "w")
     file.write(content)
     file.close()
+    response.close()
+else
+    print("Image found in cache, loading...")
 end
 
--- Render using term.blit
-local y = 1
-for line in string.gmatch(content, "[^\r\n]+") do
-    mon.setCursorPos(1, y)
-    local empty_text = string.rep(" ", #line)
-    local text_color = string.rep("f", #line)  -- Text is empty...
-    
-    mon.blit(empty_text, text_color, line)
-    y = y + 1
+-- Read the file (must be added since multiple formats)
+local file = fs.open(file_path, "r")
+local first_line = file.readLine()
+local frameList = {}
+local isAnimated = false
+
+-- Read the header (thanks gemini :c)
+local w, h, frames, duration = first_line:match("^(%d+),(%d+),(%d+),(%d+)$")
+
+-- If header
+if w and h and frames and duration then
+    frames = tonumber(frames)
+    duration = tonumber(duration) / 1000 --ms
+    h = tonumber(h)
+    w = tonumber(w)
+
+    if frames > 1 then isAnimated = true end
+
+    -- Read the rest block by block
+    for i = 1, frames do
+        local frameData = {}
+        for j = 1, h do
+            frameData[j] = file.readLine()
+        end
+        frameList[i] = frameData
+    end
+
+-- If no header
+else
+    local frameData = { first_line } -- Keep 1st line as pixels
+    local line = file.readLine()
+    while line do
+        table.insert(frameData, line)
+        line = file.readLine()
+    end
+    frameList[1] = frameData
+end
+file.close()
+
+-- Render using term.blit (both animated and static)
+local function drawFram(lineTable)
+    for y = 1, #linesTable do
+        local line = linesTable[y]
+        if line and #line > 0 then
+            mon.setCursorPos(1, y)
+            local empty_text = string.rep(" ", #line)
+            local text_color = string.rep("f", #line)  -- Text is empty...
+            mon.blit(empty_text, text_color, line)
+        end
+    end
 end
 
-print("Task should be done")
+-- Display logic here
+if isAnimated then
+    print("Playing GIF, press any key to stop")
+
+    local currentFrame = 1
+    local timerId = os.startTimer(duration)
+
+    -- Inf loop
+    while true do:
+        local event, p1 = os.pullEvent()
+
+        -- When its time to draw the next frame
+        if event == "timer" and p1 == timerId then
+            drawFrame(frameList[currentFrame])
+            currentFrame = currentFrame + 1
+
+            if currentFrame > frames then currentFrame = 1 end -- Loop back to start
+
+            timerId = os.startTimer(duration) -- Wait for next frame
+        
+        elseif event == "key" or event == "char" then   -- Add redstone or modem signals
+            print("Stopping animation...")
+            break
+        end
+    end
+else  -- Static ez
+    drawFrame(frameList[1])
+    print("Task should be done")
+end
