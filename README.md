@@ -36,8 +36,8 @@ Therefore, this script calculates the true physical aspect ratio, pre-distorting
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/stupid-neko/CCTweaked-ImageSync.git
-cd CCTweaked-ImageSync
+git clone https://github.com/stupid-neko/cc-tweaked-imagesync.git
+cd cc-tweaked-imagesync
 ```
 
 2. Create a virtual environment (optional but recommended) and install dependencies aka pillow:
