@@ -107,7 +107,7 @@ if isAnimated then
     local timerId = os.startTimer(duration)
 
     -- Inf loop
-    while true do:
+    while true do
         local event, p1 = os.pullEvent()
 
         -- When its time to draw the next frame
