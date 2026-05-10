@@ -87,7 +87,7 @@ end
 file.close()
 
 -- Render using term.blit (both animated and static)
-local function drawFram(lineTable)
+local function drawFrame(lineTable)
     for y = 1, #linesTable do
         local line = linesTable[y]
         if line and #line > 0 then
