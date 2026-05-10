@@ -22,7 +22,7 @@ Therefore, this script calculates the true physical aspect ratio, pre-distorting
 * Advanced Computers and Advanced Monitors 
 * HTTP API enabled in CC:Tweaked server config (enabled by default).
 
-> [!INFO]
+> [!TIP]
 > Computer's disk size is capped at 1MB. You can change it in config/computercraft-server.toml
 
 > [!CAUTION]
