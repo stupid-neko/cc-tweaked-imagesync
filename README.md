@@ -22,6 +22,9 @@ Therefore, this script calculates the true physical aspect ratio, pre-distorting
 * Advanced Computers and Advanced Monitors 
 * HTTP API enabled in CC:Tweaked server config (enabled by default).
 
+> [!INFO]
+> Computer's disk size is capped at 1MB. You can change it in config/computercraft-server.toml
+
 > [!CAUTION]
 > Standard grey monitors do not support color. Since 1.80pr1 they can use all 16 colors but will render in grayscale on screen. More information [here](https://tweaked.cc/peripheral/monitor.html#v:blit)
 <p align="center">
@@ -73,9 +76,9 @@ Because CC computers need a way to download the image data, Pastebin is used.
 3. Copy the ID from the end of the Pastebin URL (for https://pastebin.com/aBcD123, the ID is aBcD123).
 
 ### Display in Minecraft (Lua)
-Download the Lua script to your CC computer with pastebin. I published the most up to date version to pastebin [here](https://pastebin.com/x0JWn6b2), and I recommend you to do so (or use mine). Then type:
+Download the Lua script to your CC computer with pastebin. I published the most up to date version to pastebin [here](https://pastebin.com/qnacw7a2), and I recommend you to do so (or use mine). Then type:
 ```
-pastebin get [your code or "x0JWn6b2"] imagesync.lua
+pastebin get [your code or qnacw7a2] imagesync.lua
 ``` 
 
 Then run the script with the Pastebin ID you copied
@@ -90,6 +93,9 @@ If for any reason you want to see a text file you made long time ago, you can us
   <img src="Images/viewer.png" alt="Dimensions" width="300"/>
 </p>
 
+> [!CAUTION]
+> I have not tested this with GIFs, i will definitely not work. I will do something about it
+
 ### Custom palettes
 Starting from v1.80pr1, `setPaletteColor(...)` can change the rgb value for a color, allowing more complex images. You can change the palette directly in the `config.toml` file.
 
@@ -99,7 +105,7 @@ Starting from v1.80pr1, `setPaletteColor(...)` can change the rgb value for a co
 - [x] ~~Lua: Download and save image so they are not downloaded each time~~
 - [x] ~~Recognition of a txt file dimensions~~
 - [x] ~~Add dithering~~
-- [ ] Add GIF support 
+- [x] ~~Add GIF support~~
 
 
 ## Contributing

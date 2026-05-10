@@ -79,6 +79,10 @@ class CCImageTool:
         self.gamma_var = tk.DoubleVar(value=1.0)
         self.dither_var = tk.DoubleVar(value=0.0)
 
+        # Frame for gif
+        self.current_frame_var = tk.IntVar(value=1)
+        self.max_frames = 1
+
         self.original_image = None
         self.display_image = None
         self.display_scale = 1.0
@@ -139,6 +143,13 @@ class CCImageTool:
         self.preview_label = tk.Label(preview_container, bg="black")
         self.preview_label.pack(padx=10)
 
+        # Slider for GIFS
+        frame_slider_container = tk.Frame(preview_container, bg="#1e1e1e")
+        frame_slider_container.pack(fill=tk.X, pady=(10, 0))
+        tk.Label(frame_slider_container, text="Frame:", fg="white", bg="#1e1e1e").pack(side=tk.LEFT)
+        self.frame_slider = tk.Scale(frame_slider_container, from_=1, to=1, orient=tk.HORIZONTAL, variable=self.current_frame_var, bg="#1e1e1e", fg="white", troughcolor="#333", highlightthickness=0, command=self.on_frame_change)
+        self.frame_slider.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+
         # Slider frame
         slider_frame = tk.LabelFrame(right_frame, text="Image settings", fg="white", bg="#1e1e1e", pady=10)
         slider_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(0,10))
@@ -174,30 +185,51 @@ class CCImageTool:
     
 
     def load_image(self):
-        path = filedialog.askopenfilename(filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp")])
+        path = filedialog.askopenfilename(filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp *.gif")])
         if not path: return
         self.original_image = Image.open(path)
+        
+        # Slider config
+        is_animated = getattr(self.original_image, "is_animated", False)
+        self.max_frames = self.original_image.n_frames if is_animated else 1
 
-        # Copy first frame
-        frame0 = self.original_image.copy().convert('RGB')
+        if self.max_frames > 1:
+            self.frame_slider.config(to=self.max_frames, state=tk.NORMAL)
+        else:
+            self.frame_slider.config(to=1, state=tk.DISABLED)
+        self.current_frame_var.set(1)
 
-        w, h = frame0.size
+        w, h = self.original_image.size
         self.display_scale = min(800/w, 600/h)
         if self.display_scale > 1: self.display_scale = 1.0
 
         new_w, new_h = int(w * self.display_scale), int(h * self.display_scale)
-        self.display_image = frame0.resize((new_w, new_h), Image.Resampling.LANCZOS)
-
-        self.tk_image = ImageTk.PhotoImage(self.display_image)
         self.canvas.config(scrollregion=(0,0,new_w,new_h))
-        self.canvas.create_image(0, 0, anchor="nw", image=self.tk_image, tags="img")
-
+        
         self.crop_cx, self.crop_cy = new_w/2, new_h/2
         self.crop_zoom = 1.0
 
+        self.on_frame_change()
+    
+
+    def on_frame_change(self, event=None):
+        if not self.original_image: return
+
+        # Slider from 0 to N-1
+        frame_idx = self.current_frame_var.get() - 1
+        self.original_image.seek(frame_idx)
+
+        frame_rgb = self.original_image.copy().convert('RGB')
+        new_w, new_h = int(frame_rgb.width * self.display_scale), int(frame_rgb.height * self.display_scale)
+        self.display_image = frame_rgb.resize((new_w, new_h), Image.Resampling.LANCZOS)
+
+        self.tk_image = ImageTk.PhotoImage(self.display_image)
+        self.canvas.delete("img")
+        self.canvas.create_image(0, 0, anchor="nw", image=self.tk_image, tags="img")
+        
         self.update_canvas()
         self.update_preview()
-    
+
 
     def on_size_change(self, event=None):
         self.target_w_chars = SCREEN_W_MAP[self.w_var.get()]
@@ -330,7 +362,7 @@ class CCImageTool:
     
 
     def generate_cc_data(self):
-        # Return only frame 0
+        # Right frame is defined so its oki
         return self.process_single_image(self.original_image)
     
 
@@ -358,8 +390,35 @@ class CCImageTool:
 
     def export(self):
         if not self.original_image: return
-        os.makedirs("outputs", exist_ok=True)
 
+        is_animated = getattr(self.original_image, "is_animated", False)
+        n_frames = self.original_image.n_frames if is_animated else 1
+        duration = self.original_image.info.get('duration', 100) if is_animated else 0
+
+        # Size prediction to avoid exceeding 512kb or kB idk limit from pastebin
+        # PREDICTION: 1 char = 1B
+        chars_per_frame = (self.target_w_chars * self.target_h_chars) + self.target_h_chars  # Line break
+        estimated_size_kb = (chars_per_frame * n_frames) / 1024
+
+        frame_step = 1  # Read all frames 1 by 1
+        if estimated_size_kb > 490 and is_animated:
+            msg = (
+                f"WARNING! Final export will use {estimated_size_kb:.0f} KB.\n"
+                f"Free limit for pastebin is 512 KB\n\n"
+                f"Do you want to skip every 2 frames ? File will use ~2x less disk space"
+            )
+            choice = messagebox.askyesnocancel("Large file detected", msg)
+
+            if choice is None:
+                return
+            elif choice is True:
+                frame_step = 2
+                n_frames = n_frames // 2
+                duration = duration * 2
+            else:
+                messagebox.showinfo("Info", "Full export, consider using alternatives (Github Gist")
+       
+        os.makedirs("outputs", exist_ok=True)
         file_path = filedialog.asksaveasfilename(
             initialdir="outputs",
             title="Export As...",
@@ -370,10 +429,6 @@ class CCImageTool:
 
         if not file_path: return
 
-        is_animated = getattr(self.original_image, "is_animated", False)
-        n_frames = self.original_image.n_frames if is_animated else 1
-        duration = self.original_image.info.get('duration', 100) if is_animated else 0
-        
         # Make the header
         header = f"{self.target_w_chars},{self.target_h_chars},{n_frames},{duration}"
 
@@ -386,17 +441,17 @@ class CCImageTool:
                 f.write(header + "\n")
 
                 if is_animated:
-                    for i in range(n_frames):
+                    for i in range(0, self.original_image.n_frames, frame_step):
                         self.original_image.seek(i)
                         txt_lines, cc_img = self.process_single_image(self.original_image)
                         f.write("\n".join(txt_lines) + "\n")
                         if i == 0: first_frame_img = cc_img
-                    else:
-                        txt_lines, cc_img = self.process_single_image(self.original_image)
-                        f.write("\n".join(txt_lines) + "\n")
-                        first_frame_img = cc_img
+                else:
+                    txt_lines, cc_img = self.process_single_image(self.original_image)
+                    f.write("\n".join(txt_lines) + "\n")
+                    first_frame_img = cc_img
                 
-            # # If you want to have png preview, uncomment this
+            # # If you want to have png preview, uncomment this :
             # base_path = os.path.splitext(file_path)[0]
             # png_path = f"{base_path}_raw.png"
             # first_frame_img.save(png_path)

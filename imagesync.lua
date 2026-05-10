@@ -23,10 +23,16 @@ mon.clear()
 -- Cache system
 local dir_path = "Images"
 local file_path = dir_path .. "/" .. pastebin_id .. ".txt"
+local content = ""
 
 -- Checking local cache
-if not fs.exists(file_path) then
-    print("Connecting to Pastebin (" .. pastebin_id .. ")...")
+if fs.exists(file_path) then
+    print("Loading cache...")
+    local file = fs.open(file_path, "r")
+    content = file.readAll()
+    file.close()
+else
+    print("Connecting to Pastebin...")
     local url = "https://pastebin.com/raw/" .. pastebin_id
     local response, err = http.get(url)
 
@@ -36,20 +42,29 @@ if not fs.exists(file_path) then
         return
     end
 
-    if not fs.exists(dir_path) then fs.makeDir(dir_path) end
-    
-    print("Saving locally...")
-    local file = fs.open(file_path, "w")
-    file.write(content)
-    file.close()
-    response.close()
-else
-    print("Image found in cache, loading...")
+    local first_line = content:match("([^\r\n]+)")
+    if first_line then
+        local w, h, frames, dur = first_line:match("^(%d+),(%d+),(%d+),(%d+)$")
+            
+        -- Save if static image
+        if not frames or tonumber(frames) <= 1 then
+            if not fs.exists(dir_path) then fs.makeDir(dir_path) end
+            local file = fs.open(file_path, "w")
+            file.write(content)
+            file.close()
+            print("Saved static image to cache.")
+        else
+            print("GIF detected: Skipping cache to save disk space.")
+        end
+    end
 end
 
--- Read the file (must be added since multiple formats)
-local file = fs.open(file_path, "r")
-local first_line = file.readLine()
+-- Content analysis
+local lines = {}
+for line in content:gmatch("[^\r\n]+") do
+    table.insert(lines, line)
+end
+local first_line = lines[1]
 local frameList = {}
 local isAnimated = false
 
@@ -61,7 +76,7 @@ if w and h and frames and duration then
     frames = tonumber(frames)
     duration = tonumber(duration) / 1000 --ms
     h = tonumber(h)
-    w = tonumber(w)
+    w = tonumber(w)  -- useless :(
 
     if frames > 1 then isAnimated = true end
 
@@ -69,25 +84,18 @@ if w and h and frames and duration then
     for i = 1, frames do
         local frameData = {}
         for j = 1, h do
-            frameData[j] = file.readLine()
+            frameData[j] = lines[((i-1) * h + j) + 1]
         end
         frameList[i] = frameData
     end
 
 -- If no header
 else
-    local frameData = { first_line } -- Keep 1st line as pixels
-    local line = file.readLine()
-    while line do
-        table.insert(frameData, line)
-        line = file.readLine()
-    end
-    frameList[1] = frameData
+    frameList[1] = lines
 end
-file.close()
 
 -- Render using term.blit (both animated and static)
-local function drawFrame(lineTable)
+local function drawFrame(linesTable)
     for y = 1, #linesTable do
         local line = linesTable[y]
         if line and #line > 0 then
