@@ -42,6 +42,9 @@ else
         return
     end
 
+    content = response.readAll()
+    response.close()
+
     local first_line = content:match("([^\r\n]+)")
     if first_line then
         local w, h, frames, dur = first_line:match("^(%d+),(%d+),(%d+),(%d+)$")
