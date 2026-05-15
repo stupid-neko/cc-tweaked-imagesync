@@ -73,12 +73,12 @@ Because CC computers need a way to download the image data, Pastebin is used.
 
 1. Open the generated .txt file from the outputs/ folder and copy all the text.
 2. Go to [Pastebin](https://pastebin.com/), paste the text, and create a new paste.
-3. Copy the ID from the end of the Pastebin URL (for https://pastebin.com/aBcD123, the ID is aBcD123).
+3. Copy the ID from the end of the Pastebin URL (for https://pastebin.com/pmF7EYpT, the ID is pmF7EYpT).
 
 ### Display in Minecraft (Lua)
-Download the Lua script to your CC computer with pastebin. I published the most up to date version to pastebin [here](https://pastebin.com/qnacw7a2), and I recommend you to do so (or use mine). Then type:
+Download the Lua script to your CC computer with pastebin. I published the most up to date version to pastebin [here](https://pastebin.com/m0GdXU2z), that you can review, or you can use your id instead. Type:
 ```
-pastebin get [your code or qnacw7a2] imagesync.lua
+pastebin get m0GdXU2z imagesync.lua
 ``` 
 
 Then run the script with the Pastebin ID you copied
