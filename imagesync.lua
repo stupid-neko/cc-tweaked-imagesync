@@ -11,14 +11,16 @@ if not pastebin_id then
 end
 
 -- Loads monitor
-local mon = peripheral.find("monitor")
-if not mon then
+local monitors = { peripheral.find("monitor") }
+if #monitors == 0 then
     print("ERROR: No monitor found !")
     return
 end
 
-mon.setTextScale(0.5)
-mon.clear()
+for _, mon in ipairs(monitors) do
+    mon.setTextScale(0.5)
+    mon.clear()
+end
 
 -- Cache system
 local dir_path = "Images"
@@ -97,15 +99,17 @@ else
     frameList[1] = lines
 end
 
--- Render using term.blit (both animated and static)
+-- Render using term.blit (both animated and static) on all monitors
 local function drawFrame(linesTable)
-    for y = 1, #linesTable do
-        local line = linesTable[y]
-        if line and #line > 0 then
-            mon.setCursorPos(1, y)
-            local empty_text = string.rep(" ", #line)
-            local text_color = string.rep("f", #line)  -- Text is empty...
-            mon.blit(empty_text, text_color, line)
+    for _, mon in ipairs(monitors) do
+        for y = 1, #linesTable do
+            local line = linesTable[y]
+            if line and #line > 0 then
+                mon.setCursorPos(1, y)
+                local empty_text = string.rep(" ", #line)
+                local text_color = string.rep("f", #line)  -- Text is empty...
+                mon.blit(empty_text, text_color, line)
+            end
         end
     end
 end
